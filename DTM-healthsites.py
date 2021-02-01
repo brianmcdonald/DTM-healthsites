@@ -21,9 +21,27 @@ import geopandas as gpd
 
 # %%
 dtm = pd.read_excel("Mozambique - Site Assessment - Cyclone IDAI and Floods - Round 18.xlsx")
-#for cols in dtm.columns:
-#    print(cols)
 dtm_short = dtm[['SSID','Latitude','Longitude']]
-dtm_short
 
 # %%
+r = requests.get('https://healthsites.io/api/v2/facilities/?api-key=8d978f6bfa9d7914751307b4ebcc500f711771d0&page=1&country=Mozambique')
+data = r.json()
+hsio =  pd.json_normalize(data)
+r = requests.get('https://healthsites.io/api/v2/facilities/count?country=Mozambique&format=json')
+data = r.json()
+pagecount = int(data/100)
+pagecount
+for page in range(2,pagecount+2):
+    rtemp = requests.get(f'https://healthsites.io/api/v2/facilities/?api-key=8d978f6bfa9d7914751307b4ebcc500f711771d0&page={page}&country=Mozambique')
+    datatemp = rtemp.json()
+    hsiotemp =  pd.json_normalize(datatemp)
+    hsio = hsio.append(hsiotemp, ignore_index=True)
+
+# %%
+hsio_short = hsio[['osm_id','attributes.name','centroid.coordinates']]
+hsio_short['centroid.coordinates']
+t = pd.DataFrame(hsio_short['centroid.coordinates'].to_list(), columns=['lat', 'long'])
+hsio_short.join(t, how='outer').drop(['centroid.coordinates'], axis=1)
+
+# %%
+len(dtm_short)
