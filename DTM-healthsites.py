@@ -13,6 +13,16 @@
 #     name: python3
 # ---
 
+# %% [markdown]
+# ## Todo:
+# - [x] Get DTM data .xslx for Mozambique
+# - [x] Get Healthsites.io facilities for Mozambique
+# - [x] Map locations together
+# - [x] Get the nearest hospital to each displacement site (as the crow flies, for now)
+# - [x] Map the straight-line distance from each site to the nearest hospital
+# - [ ] Use OSRM to calculate travel time (by fooot) for every site to their nearest hospital
+# - [ ] Make a histogram of travel times
+
 # %%
 import pandas as pd
 import requests
@@ -21,6 +31,7 @@ import geopandas as gpd
 import folium 
 from shapely.ops import nearest_points
 from shapely.geometry import LineString
+from IPython.display import Markdown
 
 # %%
 dtm = pd.read_excel("Mozambique - Site Assessment - Cyclone IDAI and Floods - Round 18.xlsx")
@@ -50,7 +61,7 @@ hsio_short = hsio_short.join(t, how='outer').drop(['centroid.coordinates'], axis
 
 # %%
 def create_gdf(df, x="lon", y="lat"):
-    return gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs={"init":"epsg:4326"})
+    return gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs="epsg:4326")
 
 hsio_short_gdf = create_gdf(hsio_short)
 dtm_short_gdf = create_gdf(dtm_short)
@@ -68,6 +79,9 @@ for location in locs_hsio_short:
 #m.save("map1.html")
 m
 
+# %%
+Markdown(f" There are {len(dtm_short)} DTM tracked displacement sites in Mozambique and {len(hsio_short)} health facilities")
+
 
 # %%
 def calculate_nearest(row, destination, val, col="geometry"):
@@ -77,4 +91,38 @@ def calculate_nearest(row, destination, val, col="geometry"):
     match_value = match_geom[val].to_numpy()[0]
     return match_value
 
-points_gdf["nearest_geom"] = points_gdf.apply(calculate_nearest, destination=stations_gdf, val="geometry", axis=1)
+dtm_short_gdf["nearest_geom"] = dtm_short_gdf.apply(calculate_nearest, destination=hsio_short_gdf, val="geometry", axis=1)
+dtm_short_gdf["nearest_hospital"] = dtm_short_gdf.apply(calculate_nearest, destination=hsio_short_gdf, val="attributes.name", axis=1)
+
+# %%
+dtm_short_gdf
+
+# %%
+# Create LineString Geometry
+dtm_short_gdf['line'] = dtm_short_gdf.apply(lambda row: LineString([row['geometry'], row['nearest_geom']]), axis=1)
+# Create Line Geodataframe
+line_gdf = dtm_short_gdf[["SSID", "nearest_hospital", "line"]].set_geometry('line')
+# Set the Coordinate reference
+line_gdf.crs = crs="epsg:4326"
+
+# %%
+m = folium.Map([-20.0760232,34.3582913909869],zoom_start = 10,  
+    tiles='CartoDb dark_matter')
+locs_hsio_short = zip(hsio_short_gdf.lat, hsio_short_gdf.lon)
+locs_dtm_short = zip(dtm_short_gdf.lat, dtm_short_gdf.lon)
+
+folium.GeoJson(line_gdf).add_to(m)
+for location in locs_hsio_short:
+    folium.CircleMarker(location=location, color="white", radius=2).add_to(m)
+for location in locs_dtm_short:
+    folium.CircleMarker(location=location, color="red", radius=4).add_to(m)
+#m.save('map2.html')
+m
+
+
+
+# %%
+dtm_short_gdf
+
+# %%
+dtm_short_gdf.geometry.x

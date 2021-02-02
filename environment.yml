@@ -10,4 +10,5 @@ dependencies:
   - jupytext
   - openpyxl
   - geopandas
+  - folium
 prefix: /Users/brian/miniconda3/envs/healthsites
