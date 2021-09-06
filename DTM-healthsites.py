@@ -201,6 +201,4 @@ fig,ax = plt.subplots(1, 1, figsize=(12,5))
 ax.hist(test['duration_gap'], density=True, bins=4) 
 
 # %%
-test.to_excel('temp.xlsx')
-
-# %%
+test.to_excel('temp2.xlsx')
