@@ -21,7 +21,7 @@
 # - [x] Get the nearest hospital to each displacement site (as the crow flies, for now)
 # - [x] Map the straight-line distance from each site to the nearest hospital
 # - [x] Use OSRM to calculate travel time (by fooot) for every site to their nearest hospital
-# - [ ] Make a histogram of travel times
+# - [x] Make a histogram of travel times
 
 # %%
 import pandas as pd
@@ -42,7 +42,7 @@ matplotlib.rcParams.update({'font.size': 14})
 
 # %%
 # get DTM data
-dtm = pd.read_excel("Mozambique - Site Assessment - Cyclone IDAI and Floods - Round 18.xlsx")
+dtm = pd.read_excel("Central Mozambique - Multi-Sectorial Location Assessment Dataset - Round 20_0.xlsx")
 dtm.rename(columns={'Latitude':'lat', 'Longitude':'lon','How long does it take to reach the nearest health facility from the site?':'health_facility_distance'}, inplace=True)
 dtm_short = dtm[['SSID','lat','lon','health_facility_distance']]
 
@@ -102,7 +102,6 @@ def calculate_nearest(row, destination, val, col="geometry"):
 dtm_short_gdf["nearest_geom"] = dtm_short_gdf.apply(calculate_nearest, destination=hsio_short_gdf, val="geometry", axis=1)
 dtm_short_gdf["nearest_hospital"] = dtm_short_gdf.apply(calculate_nearest, destination=hsio_short_gdf, val="attributes.name", axis=1)
 
-# %%
 # Create LineString Geometry and map
 dtm_short_gdf['line'] = dtm_short_gdf.apply(lambda row: LineString([row['geometry'], row['nearest_geom']]), axis=1)
 line_gdf = dtm_short_gdf[["SSID", "nearest_hospital", "line"]].set_geometry('line')
@@ -120,8 +119,6 @@ for location in locs_dtm_short:
     folium.CircleMarker(location=location, color="red", radius=4).add_to(m)
 #m.save('map2.html')
 m
-
-
 
 # %% [markdown]
 # ## OSM Routing
@@ -174,8 +171,8 @@ ax.xaxis.set_major_locator(MultipleLocator(20))
 ax.yaxis.set_major_formatter('{x:.0f}')
 ax.set_title('Calculated travel time (by foot) between IDP sites and health facilities - Mozambique')
 
-fig.savefig(f"distance.svg", format="svg", transparent=True, bbox_inches='tight', pad_inches=0) 
-fig.savefig(f"distance.png", format="png", transparent=True, bbox_inches='tight', pad_inches=0) 
+#fig.savefig(f"distance.svg", format="svg", transparent=True, bbox_inches='tight', pad_inches=0) 
+#fig.savefig(f"distance.png", format="png", transparent=True, bbox_inches='tight', pad_inches=0) 
 
 # %%
 fig,ax = plt.subplots(1, 1, figsize=(12,5))
@@ -198,7 +195,15 @@ ax2.hist(test['computed_duration_code'], density=False, bins=4)
 #test[['ki_duration_code','computed_duration_code']]
 test['duration_gap'] = test['ki_duration_code'].astype(int)-test['computed_duration_code'].astype(int)
 fig,ax = plt.subplots(1, 1, figsize=(12,5))
-ax.hist(test['duration_gap'], density=True, bins=4) 
+ax.hist(test['duration_gap'], density=False, bins=4) 
+ax.set_ylabel('Number of sites')
+ax.set_title('variance in travel time answered between KI and Calculation - 0 means similar')
+plt.show()
 
 # %%
 test.to_excel('temp2.xlsx')
+
+# %%
+len(test)
+
+# %%
